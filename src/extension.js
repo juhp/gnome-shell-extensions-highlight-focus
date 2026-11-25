@@ -185,14 +185,23 @@ export default class HightlightCurrentWindow extends Extension {
       return;
     }
 
-    const wid = win.get_id();
     const border = new St.Bin({ style_class: "highlight-border" });
     global.window_group.add_child(border);
-    let rect = win.get_frame_rect();
-    let inset = 2;
 
-    border.set_size(rect.width + inset * 2, rect.height + inset * 2);
-    border.set_position(rect.x - inset, rect.y - inset);
+    const syncGeometry = () => {
+      const rect = win.get_frame_rect();
+      const inset = 2;
+      border.set_size(rect.width + inset * 2, rect.height + inset * 2);
+      border.set_position(rect.x - inset, rect.y - inset);
+    };
+    // Keyboard moves can change the frame without changing focus.
+    const positionChangedId = win.connect("position-changed", syncGeometry);
+    const sizeChangedId = win.connect("size-changed", syncGeometry);
+    border.connect("destroy", () => {
+      win.disconnect(positionChangedId);
+      win.disconnect(sizeChangedId);
+    });
+    syncGeometry();
     border.show();
     this.borders.push(border);
 
